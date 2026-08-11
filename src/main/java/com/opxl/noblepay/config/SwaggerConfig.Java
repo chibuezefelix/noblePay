@@ -1,1 +1,1 @@
-com.opxl.noblepay
+package com.opxl.noblepay.config;
