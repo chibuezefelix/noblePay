@@ -73,7 +73,4 @@ public class WebPayRequest {
 
     @PrePersist
     private  void onUpdated(){ setUpdatedOn( LocalDateTime.now());}
-
-
-
 }
