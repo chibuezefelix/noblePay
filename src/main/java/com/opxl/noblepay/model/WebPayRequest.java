@@ -56,7 +56,7 @@ public class WebPayRequest {
 
     @Type(JsonType.class)
     @Column(name="json")
-    private  String dataInfirmation;
+    private  String deviceInformation;
 
     @UpdateTimestamp
     @JsonFormat(pattern = "yyyy-mm-dd HH:mm:ss")
