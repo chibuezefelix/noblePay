@@ -1,5 +1,11 @@
 package com.opxl.noblepay.dto.response;
 
+
+import lombok.Getter;
+import lombok.Setter;
+
+@Setter
+@Getter
 public class InswPurchaseResponse {
     private String amount;
     private String paymentId;
