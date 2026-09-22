@@ -32,6 +32,12 @@ public class InitiateWebPayRequest {
     @NotNull
     private String pan;
 
+    @SerializedName("pin")
+    @NotEmpty
+    @NotNull
+    @NotBlank
+    private String pin;
+
     @SerializedName("amount")
     @NotEmpty
     @NotBlank
