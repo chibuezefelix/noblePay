@@ -10,6 +10,7 @@ import com.opxl.noblepay.dto.request.InswResendOtpRequest;
 import com.opxl.noblepay.dto.response.InswAuthWebResponse;
 import com.opxl.noblepay.dto.response.InswAuthorizeResponse;
 import com.opxl.noblepay.dto.response.InswPurchaseResponse;
+import com.opxl.noblepay.dto.response.InswTranStatusResponse;
 import com.opxl.noblepay.http.HttpClient;
 import com.opxl.noblepay.model.WebPayRequest;
 import com.opxl.noblepay.repository.WebPayRequestRepository;
@@ -27,6 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.WebRequest;
 
 import javax.crypto.Cipher;
+import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
@@ -175,18 +177,141 @@ public class WebPayServiceImpl implements WebPayService {
     }
     @Override
     public Object authorizeTrans(AuthorizeInswRequest authorizeInswRequest) {
-        return null;
+        InswAuthWebResponse inswAuthWebResponse = getAuthToken();
+        if(Objects.isNull(inswAuthWebResponse)){
+            return  null;
+        }
+
+        if (StringUtils.isEmpty(authorizeInswRequest.getTransactionId())){
+            return  null;
+        }
+        WebPayRequest webPayRequest = webPayRequestRepository.firstByPaymentId(authorizeInswRequest.getPaymentId()).orElse(null);
+        if(Objects.isNull(webPayRequest)){
+            return  null;
+        }
+
+        Map<String, String> headers = new  HashMap<>();
+        headers.put("Content-Type", "application/x-www-form-urlencoeded");
+        headers.put("Authorization" , "Bearer" + " " + inswAuthWebResponse.getAccessToken());
+        String url = environment.getProperty("INSW_AUTHORIZE_URL");
+        if(StringUtils.isEmpty(authorizeInswRequest.getOtp())){
+            authorizeInswRequest.setEciFlag("07");//not 3D Secure
+            authorizeInswRequest.setAuthFlag(webPayRequest.getAuthData());
+        }
+        String requestBody = gson.toJson(authorizeInswRequest);
+        InswAuthorizeResponse inswAuthorizeResponse = new InswAuthorizeResponse();
+        String responseBody = "";
+        String responseMessage= "";
+        String responseCode = "";
+
+        try {
+            Response response  = httpClient.post(headers, requestBody, url);
+            responseBody =response.body().toString();
+            responseMessage = response.message();
+            responseCode = String .valueOf(response.code());
+
+            inswAuthorizeResponse = gson.fromJson(responseBody, InswAuthorizeResponse.class);
+            webPayRequest.setResponseCode(inswAuthorizeResponse.getResponseCode());
+            webPayRequest.setResponseMessage(inswAuthorizeResponse.getMessage());
+            webPayRequest.setStan(inswAuthorizeResponse.getStan());
+            webPayRequest.setCardType(inswAuthorizeResponse.getCardType());
+            webPayRequest.setTransactionIdentifier(inswAuthorizeResponse.getTransactionIdentifier());
+            webPayRequest.setBankCode(inswAuthorizeResponse.getBankCode());
+            webPayRequest.setTerminalId(inswAuthorizeResponse.getTerminalId());
+            webPayRequest.setPanLast4Digits(inswAuthorizeResponse.getPanLast4Digits());
+            webPayRequest.setToken(inswAuthorizeResponse.getToken());
+            webPayRequest.setTokenExpiryDate(inswAuthorizeResponse.getTokenExpiryDate());
+            webPayRequest.setRetrievalReferenceNumber(inswAuthorizeResponse.getRetrievalReferenceNumber());
+            webPayRequestRepository.save(webPayRequest);
+            return  inswAuthorizeResponse;
+ 
+
+        } catch (Exception e) {
+            log.error("Error authorizeTransaction: {}",e.getMessage());
+//            throw new RuntimeException(e);
+        }
+
+        inswAuthorizeResponse.setMessage(responseMessage);
+        inswAuthorizeResponse.setResponseCode(responseCode);
+
+
+        return inswAuthorizeResponse;
     }
 
     @Override
-    public Object statusVerify(String transactionRef, String amount) {
-        return null;
+    public Object statusVerify(String transactionRef, String amount) {        InswAuthWebResponse iswAuthWebPayResponse = getAuthToken();
+        if (Objects.isNull(iswAuthWebPayResponse)) {
+            return null;
+        }
+
+        InswTranStatusResponse iswStatusResponse = new InswTranStatusResponse();
+
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Content-Type", "application/x-www-form-urlencoded");
+        headers.put("Authorization", "Bearer " + iswAuthWebPayResponse.getAccessToken());
+
+        String minorAmount = String.valueOf(Double.parseDouble(amount) * 100).replace(".0","");
+
+
+        String url = environment.getProperty("ISW_STATUSCHECKURL") + transactionRef + "&amount=" + minorAmount;
+        String rspBody = "";
+        String msg = "";
+        String code = "";
+
+        try {
+            Response response = httpClient.getNoParam(headers, url);
+            rspBody = response.body().string();
+            code = String.valueOf(response.code());
+
+            log.info("statusVerify Response:{} | {} | {}", code, msg, rspBody);
+
+            return gson.fromJson(rspBody, InswTranStatusResponse.class);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        iswStatusResponse.setResponseCode(code);
+        iswStatusResponse.setResponseDescription(msg);
+        return iswStatusResponse;
     }
 
     @Override
     public Object resendOtp(InswResendOtpRequest resendOtpRequest) {
 
-        return null;
+        InswAuthWebResponse inswAuthWebResponse = getAuthToken();
+        if (Objects.isNull(inswAuthWebResponse)) {
+            return null;
+        }
+
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Content-Type", "application/x-www-form-urlencoded");
+        headers.put("Authorization", "Bearer " + inswAuthWebResponse.getAccessToken());
+
+
+        String reqBody = gson.toJson(resendOtpRequest);
+        String url = environment.getProperty("ISW_RESEND_OTP_URL");
+
+
+        InswAuthorizeResponse inswAuthorizeResponse = new InswAuthorizeResponse();
+        String rspBody = "";
+        String msg = "";
+        String code = "";
+        try {
+            Response response = httpClient.post(headers, reqBody, url);
+            rspBody = response.body().string();
+            msg = response.message();
+            code = String.valueOf(response.code());
+
+            log.info("resendOtp Response:{} | {} | {}", code, msg, rspBody);
+
+            return gson.fromJson(rspBody, InswAuthorizeResponse.class);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        inswAuthorizeResponse.setMessage(msg);
+        inswAuthorizeResponse.setResponseCode(code);
+        return inswAuthorizeResponse;
     }
 
 
