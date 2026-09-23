@@ -12,9 +12,7 @@ package com.opxl.noblepay.model;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.ToString;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.Type;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -26,6 +24,8 @@ import java.time.LocalDateTime;
 @Entity
 @ToString
 @Table(name = "web_requests")
+@AllArgsConstructor
+@NoArgsConstructor
 public class WebPayRequest {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
