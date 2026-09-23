@@ -1,10 +1,14 @@
 package com.opxl.noblepay.dto.response;
 
 import com.google.gson.annotations.SerializedName;
+import lombok.Getter;
+import lombok.Setter;
 
+@Setter
+@Getter
 public class InswAuthorizeResponse {
     private String panLast4Digits;
-    private String panCode;
+    private String bankCode;
     private String tokenExpiryDate;
     private String amount;
     private String transactionIdentifier;
