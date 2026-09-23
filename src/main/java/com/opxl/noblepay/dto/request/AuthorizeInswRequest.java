@@ -1,5 +1,10 @@
 package com.opxl.noblepay.dto.request;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Setter
+@Getter
 public class AuthorizeInswRequest {
     private String paymentId;
     private String otp;
